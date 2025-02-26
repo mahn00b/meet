@@ -33,5 +33,4 @@ jobs:
       - name: Build
         id: build
         run: pnpm build
-
-      if: ${{ steps['build'].outputs['result'] == 'failure' }}
+        continue-on-error: false
