@@ -3,6 +3,7 @@ name: Build Check
 on:
   pull_request:
     branches:
+      - main
       - dev
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
