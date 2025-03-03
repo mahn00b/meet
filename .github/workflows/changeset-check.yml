@@ -1,14 +1,14 @@
-name: Version
+name: Build Check
 
 on:
-  push:
+  pull_request:
     branches:
       - main
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  changesets:
+  changesets-check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -28,13 +28,7 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build
-
-      - name: Check for Changesets
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          version: pnpm changesets:version
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check Changesets
+        id: build
+        run: pnpm changeset:ci-check
+        continue-on-error: false

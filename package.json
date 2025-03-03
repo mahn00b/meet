@@ -15,7 +15,8 @@
     "lint": "next lint",
     "changeset": "changeset",
     "changeset:version": "changeset version",
-    "changeset:publish": "changeset publish"
+    "changeset:publish": "changeset publish",
+    "changeset:ci-check": "changeset status --since=main"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
