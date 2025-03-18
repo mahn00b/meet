@@ -13,6 +13,12 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Fetch main branch to check for changesets
+        run: git fetch origin main
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4

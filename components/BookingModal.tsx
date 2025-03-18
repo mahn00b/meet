@@ -8,18 +8,32 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
+import { format } from "date-fns"
 
 interface BookingModalProps {
   isOpen: boolean
   onClose: () => void
   selectedSlot: Date | null
+  durationMinutes?: number
 }
 
-export default function BookingModal({ isOpen, onClose, selectedSlot }: BookingModalProps) {
+export default function BookingModal({ isOpen, onClose, selectedSlot, durationMinutes = 30 }: BookingModalProps) {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
+
+  const endTime = selectedSlot ? new Date(selectedSlot.getTime() + durationMinutes * 60 * 1000) : null
+
+  const formatTimeRange = () => {
+    if (!selectedSlot || !endTime) return "No slot selected"
+
+    const dateStr = format(selectedSlot, "EEEE, MMMM d, yyyy")
+    const startTimeStr = format(selectedSlot, "h:mm a")
+    const endTimeStr = format(endTime, "h:mm a")
+
+    return `${dateStr} from ${startTimeStr} to ${endTimeStr}`
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,7 +57,8 @@ export default function BookingModal({ isOpen, onClose, selectedSlot }: BookingM
           name,
           email,
           start: selectedSlot.toISOString(),
-          end: new Date(selectedSlot.getTime() + 60 * 60 * 1000).toISOString(), // Assume 1-hour meetings
+          end: endTime?.toISOString(),
+          durationMinutes,
         }),
       })
 
@@ -74,7 +89,7 @@ export default function BookingModal({ isOpen, onClose, selectedSlot }: BookingM
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Book a Meeting</DialogTitle>
+          <DialogTitle>Book a {durationMinutes}-Minute Meeting</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -86,11 +101,11 @@ export default function BookingModal({ isOpen, onClose, selectedSlot }: BookingM
             <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <div>
-            <Label>Selected Time Slot</Label>
-            <Input value={selectedSlot ? selectedSlot.toLocaleString() : "No slot selected"} readOnly />
+            <Label>Selected Time</Label>
+            <div className="p-3 bg-gray-50 rounded-md text-sm">{formatTimeRange()}</div>
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Booking..." : "Book Meeting"}
+            {isLoading ? "Booking..." : "Confirm Booking"}
           </Button>
         </form>
       </DialogContent>
