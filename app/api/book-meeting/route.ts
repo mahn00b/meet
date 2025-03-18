@@ -1,52 +1,31 @@
 import { NextResponse } from "next/server"
-import { google } from "googleapis"
-import { JWT } from "google-auth-library"
-
-// These would typically be environment variables
-const GOOGLE_PRIVATE_KEY = "YOUR_PRIVATE_KEY"
-const GOOGLE_CLIENT_EMAIL = "YOUR_CLIENT_EMAIL"
-const GOOGLE_PROJECT_NUMBER = "YOUR_PROJECT_NUMBER"
-const GOOGLE_CALENDAR_ID = "YOUR_CALENDAR_ID"
-
-const SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
-
-const jwtClient = new JWT({
-  email: GOOGLE_CLIENT_EMAIL,
-  key: GOOGLE_PRIVATE_KEY,
-  scopes: SCOPES,
-})
-
-const calendar = google.calendar({ version: "v3", auth: jwtClient })
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const { name, email, start, end } = body
+  const { name, email, start, end, durationMinutes } = body
 
-  if (!name || !email || !start || !end) {
+  if (!name || !email || !start) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
   }
 
-  try {
-    const event = {
-      summary: `Meeting with ${name}`,
-      description: `Meeting booked by ${name} (${email})`,
-      start: {
-        dateTime: start,
-        timeZone: "UTC",
-      },
-      end: {
-        dateTime: end,
-        timeZone: "UTC",
-      },
-      attendees: [{ email }],
-    }
+  // Calculate end time if not provided
+  const endTime = end || new Date(new Date(start).getTime() + (durationMinutes || 30) * 60 * 1000).toISOString()
 
-    const response = await calendar.events.insert({
-      calendarId: GOOGLE_CALENDAR_ID,
-      requestBody: event,
+  try {
+    // In a real implementation, you would connect to Google Calendar here
+    // For now, we'll just simulate a successful booking
+    console.log("Booking received:", {
+      name,
+      email,
+      start,
+      end: endTime,
+      durationMinutes,
     })
 
-    return NextResponse.json({ message: "Meeting booked successfully", eventId: response.data.id })
+    return NextResponse.json({
+      message: "Meeting booked successfully",
+      eventId: "mock-event-id-" + Date.now(),
+    })
   } catch (error) {
     console.error("Error booking meeting:", error)
     return NextResponse.json({ error: "Failed to book meeting" }, { status: 500 })
