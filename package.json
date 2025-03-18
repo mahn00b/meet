@@ -6,7 +6,7 @@
   "author": "Mahmoud Yousif",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/mahn00b/meet"
   },
   "scripts": {
     "dev": "next dev",
