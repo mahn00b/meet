@@ -1,14 +1,16 @@
 "use client"
 
-import { useState } from "react"
-import { Calendar as BigCalendar, dateFnsLocalizer } from "react-big-calendar"
+import { useState, useCallback, useEffect } from "react"
+import { Calendar as BigCalendar, dateFnsLocalizer, type View } from "react-big-calendar"
 import { format } from "date-fns/format"
 import { parse } from "date-fns/parse"
 import { startOfWeek } from "date-fns/startOfWeek"
+import { lastDayOfWeek } from "date-fns/lastDayOfWeek"
 import { getDay } from "date-fns/getDay"
 import { addDays } from "date-fns/addDays"
 import { enUS } from "date-fns/locale/en-US"
 import "react-big-calendar/lib/css/react-big-calendar.css"
+import { MeetingSlot, Meeting } from "@/lib/types"
 
 const locales = {
   "en-US": enUS,
@@ -21,6 +23,29 @@ const localizer = dateFnsLocalizer({
   getDay,
   locales,
 })
+
+const useCustomCalendar = () => {
+  /**
+   * Workaround for the issue with the native navigation in the calendar
+   * see: https://github.com/jquense/react-big-calendar/issues/2720#issuecomment-2677124561
+   */
+  const [view, setView] = useState<View>('week');
+  const [date, setDate] = useState<Date>(new Date());
+  const onView = useCallback((view: View) => {
+    setView(view);
+  }, []);
+
+  const onNavigate = useCallback((date: Date) => {
+    setDate(date);
+  }, []);
+
+  return {
+    view,
+    date,
+    onView,
+    onNavigate,
+  };
+};
 
 // Generate mock busy times for the next two weeks
 const generateMockBusyTimes = () => {
@@ -83,9 +108,15 @@ interface CalendarProps {
 }
 
 export default function Calendar({ onSelectSlot, durationMinutes = 30 }: CalendarProps) {
-  const [events] = useState(mockBusyTimes)
+  const [events, setEvents] = useState<Meeting[]>([])
+  const {
+    view,
+    date,
+    onView,
+    onNavigate,
+  } = useCustomCalendar();
 
-  const handleSelectSlot = (slotInfo: { start: Date; end: Date }) => {
+  const handleSelectSlot = (slotInfo: MeetingSlot) => {
     // Check if the selected slot is available (not in the events array)
     const slotEnd = new Date(slotInfo.start.getTime() + durationMinutes * 60 * 1000)
 
@@ -108,14 +139,42 @@ export default function Calendar({ onSelectSlot, durationMinutes = 30 }: Calenda
     }
   }
 
-  const eventStyleGetter = (event: any) => ({
-    style: {
-      backgroundColor: "#E57373", // Light red for busy slots
-      color: "white",
-      border: "none",
-    },
-  })
+  const dayStyleGetter = (date: Date) => {
+    if (date.getDay() === 0 || date.getDay() === 6 || date < new Date()) {
+      return {
+        style: {
+          backgroundColor: "#F4F5F7", // Light gray for weekends
+        },
+      }
+    }
 
+    return {}
+  }
+
+  const eventStyleGetter = (event: any) => () => ({
+      style: {
+        backgroundColor: "#E57373", // Light red for busy slots
+        color: "white",
+        border: "none",
+        visibility: event.start.getTime() < new Date().getTime() ? "hidden" : "visible",
+      },
+  });
+
+  useEffect(() => {
+    fetch(`/api/availability?start=${startOfWeek(date).toISOString()}&end=${lastDayOfWeek(date).toISOString()}`)
+      .then((res) => res.json())
+      .then((data) => {
+        console.log(data)
+        setEvents(data.map((event: any) => ({
+          start: new Date(event.start),
+          end: new Date(event.end),
+          title: event.title,
+          summary: event.summary,
+          description: event.description,
+          attendees: event.attendees.map(({ email, name }: any) => ({ email, name })),
+        })))
+      });
+  }, [date])
   return (
     <div className="h-[600px] border rounded-lg p-4" suppressHydrationWarning={true}>
       <h2 className="text-xl font-semibold mb-4">Select a Time ({durationMinutes} min)</h2>
@@ -127,9 +186,14 @@ export default function Calendar({ onSelectSlot, durationMinutes = 30 }: Calenda
         style={{ height: "100%" }}
         defaultView="week"
         views={["week"]}
+        view={view}
+        date={date}
+        onView={onView}
+        onNavigate={onNavigate}
         selectable
         onSelectSlot={handleSelectSlot}
-        eventPropGetter={eventStyleGetter}
+        eventPropGetter={eventStyleGetter as any}
+        dayPropGetter={dayStyleGetter}
         step={15}
         timeslots={4}
         min={new Date(new Date().setHours(9, 0, 0, 0))}
