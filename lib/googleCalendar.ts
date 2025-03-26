@@ -1,4 +1,5 @@
-import { google  } from "googleapis"
+import { google } from "googleapis"
+import { Meeting } from "./types"
 
 // These would typically be environment variables
 async function validateAuthentication() {
@@ -46,6 +47,64 @@ export async function getAvailability(from: Date = new Date(), to: Date = new Da
     return calendars
   } catch (error) {
     console.error("Error fetching user calendars:", error)
+    throw error
+  }
+}
+
+export async function createEvent(event: Meeting) {
+  try {
+    const {
+      start,
+      end,
+      summary,
+      description,
+      attendees = [],
+    } = event
+
+    const timezone = process.env.TIMEZONE || "America/New_York"
+    const organizer = {
+      email: process.env.GOOGLE_CALENDAR_ID,
+      displayName: process.env.DISPLAY_NAME,
+      responseStatus: "accepted",
+      organizer: true
+    }
+
+    const calendar = google.calendar({ version: "v3", auth: await authorize() })
+    const response = await calendar.events.insert({
+      calendarId: process.env.GOOGLE_CALENDAR_ID,
+      requestBody: {
+        start: { dateTime: start.toISOString(), timeZone: timezone },
+        end: { dateTime: end.toISOString(), timeZone: timezone },
+        summary,
+        description,
+        attendees: [
+          ...attendees?.map(({ email, name }) => ({
+            email,
+            displayName: name,
+            responseStatus: "needsAction"
+          })),
+          organizer
+        ],
+        reminders: {
+          'useDefault': true,
+          'overrides': [
+            {'method': 'popup', 'minutes': 30},
+            {'method': 'popup', 'minutes': 10}
+          ]
+        },
+        conferenceData: {
+          createRequest: {
+            conferenceSolutionKey: {
+              type: "hangoutsMeet"
+            }
+          }
+        }
+      },
+    });
+
+    return response.data
+  } catch (error) {
+    console.error("Error creating event:", error)
     throw error
   }
 }
