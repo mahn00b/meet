@@ -1,5 +1,21 @@
-import { google } from "googleapis"
+import { google, type calendar_v3 } from "googleapis"
 import { Meeting } from "./types"
+
+function googleEventToMeeting(events: calendar_v3.Schema$Event[]): Meeting[] {
+  return events.map((event) => {
+    const { start, end, summary, description, attendees = [] } = event
+    const st = start?.dateTime || start?.date;
+    const ed = end?.dateTime || end?.date;
+    return {
+      start: new Date(st as string),
+      end: new Date(ed as string),
+      title: summary ?? `Meeting on ${new Date(st as string).toDateString()} at ${new Date(st as string).toLocaleTimeString()}`,
+      summary,
+      description,
+      attendees: attendees.map(({ email, displayName }) => ({ email, name: displayName })) || [],
+    }
+  })
+}
 
 // These would typically be environment variables
 async function validateAuthentication() {
@@ -32,7 +48,7 @@ async function authorize() {
   return auth
 }
 
-export async function getAvailability(from: Date = new Date(), to: Date = new Date()) {
+export async function getAvailability(from: Date = new Date(), to: Date = new Date()): Promise<Meeting[]> {
   try {
     const calendar = google.calendar({ version: "v3", auth: await authorize() })
     const response = await calendar.events.list({
@@ -42,9 +58,9 @@ export async function getAvailability(from: Date = new Date(), to: Date = new Da
       maxResults: 10,
       singleEvents: true,
       orderBy: "startTime",
-  });
+    });
     const calendars = response.data.items
-    return calendars
+    return googleEventToMeeting(calendars ?? [])
   } catch (error) {
     console.error("Error fetching user calendars:", error)
     throw error

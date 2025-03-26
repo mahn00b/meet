@@ -10,7 +10,13 @@ export interface SchedulingLink {
 export interface Meeting {
   start: Date
   end: Date
-  summary?: string
-  description?: string
-  attendees: { name?: string, email?: string }[]
+  title?: string | null | undefined
+  summary?: string | null | undefined
+  description?: string | null | undefined
+  attendees: { name?: string | null | undefined, email?: string | null | undefined }[]
+}
+
+export interface MeetingSlot {
+  start: Date;
+  end: Date;
 }
