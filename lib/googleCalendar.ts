@@ -42,7 +42,7 @@ async function authorize() {
 
   const auth = new google.auth.GoogleAuth({
     credentials,
-    scopes: ["https://www.googleapis.com/auth/calendar"],
+    scopes: ["https://www.googleapis.com/auth/calendar", "https://www.googleapis.com/auth/calendar.events"],
   })
 
   return auth
@@ -74,20 +74,21 @@ export async function createEvent(event: Meeting) {
       end,
       summary,
       description,
-      attendees = [],
+      attendees = []
     } = event
 
     const timezone = process.env.TIMEZONE || "America/New_York"
     const organizer = {
       email: process.env.GOOGLE_CALENDAR_ID,
       displayName: process.env.DISPLAY_NAME,
-      responseStatus: "accepted",
-      organizer: true
+      // responseStatus: "accepted",
     }
 
     const calendar = google.calendar({ version: "v3", auth: await authorize() })
     const response = await calendar.events.insert({
       calendarId: process.env.GOOGLE_CALENDAR_ID,
+      sendUpdates: "all",
+      sendNotifications: true,
       requestBody: {
         start: { dateTime: start.toISOString(), timeZone: timezone },
         end: { dateTime: end.toISOString(), timeZone: timezone },
@@ -97,15 +98,16 @@ export async function createEvent(event: Meeting) {
           ...attendees?.map(({ email, name }) => ({
             email,
             displayName: name,
-            responseStatus: "needsAction"
+            // responseStatus: "needsAction"
           })),
           organizer
         ],
         reminders: {
-          'useDefault': true,
-          'overrides': [
-            {'method': 'popup', 'minutes': 30},
-            {'method': 'popup', 'minutes': 10}
+          useDefault: false,
+          overrides: [
+            {method: 'popup', minutes: 30},
+            {method: 'email', minutes: 30},
+            {method: 'popup', minutes: 10}
           ]
         },
         conferenceData: {

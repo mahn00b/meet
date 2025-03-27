@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server"
+import { createEvent } from "@/lib/googleCalendar"
+import { create } from "domain"
 
 export async function POST(request: Request) {
   const body = await request.json()
@@ -14,17 +16,20 @@ export async function POST(request: Request) {
   try {
     // In a real implementation, you would connect to Google Calendar here
     // For now, we'll just simulate a successful booking
-    console.log("Booking received:", {
-      name,
-      email,
-      start,
-      end: endTime,
-      durationMinutes,
+    const meeting = await createEvent({
+      start: new Date(start),
+      end: new Date(endTime),
+      title: "Meeting with " + name,
+      summary: "Meeting with " + name,
+      description: "Meeting booked through scheduling link",
+      attendees: [
+        { email, name },
+      ],
     })
 
     return NextResponse.json({
       message: "Meeting booked successfully",
-      eventId: "mock-event-id-" + Date.now(),
+      eventId: "mock-event-id-" + meeting.id,
     })
   } catch (error) {
     console.error("Error booking meeting:", error)
